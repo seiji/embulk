@@ -157,6 +157,9 @@ public class PageBuilder implements AutoCloseable {
     private void writeString(int columnIndex, String value) {
         int index = stringReferences.size();
         stringReferences.add(value);
+        if (value == null) {
+            value = "";
+        }
         bufferSlice.setInt(getOffset(columnIndex), index);
         referenceSize += value.length() * 2 + 4;  // assuming size of char = size of byte * 2 + length
         clearNull(columnIndex);

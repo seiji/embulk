@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigDiff;
@@ -45,6 +46,10 @@ public class LocalFileInputPlugin implements FileInputPlugin {
         @Config("follow_symlinks")
         @ConfigDefault("false")
         boolean getFollowSymlinks();
+
+        @Config("path_match_pattern")
+        @ConfigDefault("\".*\"")
+        String getPathMatchPattern();
 
         List<String> getFiles();
 
@@ -118,6 +123,7 @@ public class LocalFileInputPlugin implements FileInputPlugin {
 
         final ImmutableList.Builder<String> builder = ImmutableList.builder();
         final String lastPath = task.getLastPath().orNull();
+        final Pattern pathMatchPattern = Pattern.compile(task.getPathMatchPattern());
         try {
             log.info("Listing local files at directory '{}' filtering filename by prefix '{}'", directory.equals(CURRENT_DIR) ? "." : directory.toString(), fileNamePrefix);
 
@@ -167,7 +173,9 @@ public class LocalFileInputPlugin implements FileInputPlugin {
                         } catch (IOException ex) {
                             throw new RuntimeException("Can't resolve symbolic link", ex);
                         }
-                        if (lastPath != null && path.toString().compareTo(lastPath) <= 0) {
+                        if(!pathMatchPattern.matcher(path.toString()).find()) {
+                            return FileVisitResult.CONTINUE;
+                        } else if (lastPath != null && path.toString().compareTo(lastPath) <= 0) {
                             return FileVisitResult.CONTINUE;
                         } else {
                             Path parent = path.getParent();
